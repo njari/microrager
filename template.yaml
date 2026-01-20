@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template for microrager app
+
+Globals:
+  Api:
+    Cors:
+      # SAM expects these values to be strings that include quotes.
+      # See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-api-cors.html
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'content-type'"
+      AllowOrigin: "'*'"
+
+Resources:
+  MessagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: MessagesFunction
+      CodeUri: lambda/
+      Handler: handler.handler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          BUCKET_NAME: your-bucket-here
+          # For local testing (SAM local): use a scratch JSON file in /tmp
+          MICRORAGER_STORAGE_MODE: local
+      Events:
+        GetMessagesApi:
+          Type: Api
+          Properties:
+            Path: /messages
+            Method: GET
+        PostMessagesApi:
+          Type: Api
+          Properties:
+            Path: /messages
+            Method: POST
+        OptionsMessagesApi:
+          Type: Api
+          Properties:
+            Path: /messages
+            Method: OPTIONS

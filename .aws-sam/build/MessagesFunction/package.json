@@ -1,0 +1,10 @@
+{
+  "name": "microrager-lambda",
+  "private": true,
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.760.0"
+  }
+}
+
