@@ -1,0 +1,28 @@
+[
+  {
+    "id": "seed-1",
+    "ip": "seed",
+    "date": "2026-01-20",
+    "message": "(seed) You can edit lambda/local-data/microrager.local.seed.json to add messages locally.",
+    "timestamp": "2026-01-20T00:00:00.000Z",
+    "votes": {}
+  },
+  {
+    "id": "seed-2",
+    "ip": "seed",
+    "date": "2026-01-20",
+    "message": "(seed) You can edit lambda/local-data/microrager.local.seed.json to add messages locally.",
+    "timestamp": "2026-01-20T00:00:00.000Z",
+    "votes": {}
+  }, 
+
+  {
+    "id": "seed-3",
+    "ip": "seed",
+    "date": "2026-01-20",
+    "message": "neww annoying thing",
+    "timestamp": "2026-01-20T00:00:00.000Z",
+    "votes": {}
+  }
+]
+

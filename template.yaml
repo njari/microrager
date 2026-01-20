@@ -12,6 +12,11 @@ Globals:
       AllowOrigin: "'*'"
 
 Resources:
+  MessagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: microrager
+
   MessagesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -21,9 +26,12 @@ Resources:
       Runtime: nodejs20.x
       Environment:
         Variables:
-          BUCKET_NAME: your-bucket-here
-          # For local testing (SAM local): use a scratch JSON file in /tmp
-          MICRORAGER_STORAGE_MODE: local
+          BUCKET_NAME: !Ref MessagesBucket
+          MICRORAGER_STORAGE_MODE: s3
+      Policies:
+        # Allows read/write objects in the specified bucket.
+        - S3CrudPolicy:
+            BucketName: !Ref MessagesBucket
       Events:
         GetMessagesApi:
           Type: Api
@@ -40,3 +48,8 @@ Resources:
           Properties:
             Path: /messages
             Method: OPTIONS
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for messages"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/messages"

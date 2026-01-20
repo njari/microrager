@@ -19,6 +19,7 @@ Resources:
         Variables:
           BUCKET_NAME: your-bucket-here
           MICRORAGER_STORAGE_MODE: local
+          MICRORAGER_LOCAL_SEED_FILENAME: microrager.local.seed.json
       Events:
         GetMessagesApi:
           Type: Api

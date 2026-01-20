@@ -29,9 +29,12 @@ frontend/.pnp.js
 # Lambda / backend
 lambda/node_modules/
 
+# Local dev seed data (keep an example checked in)
+lambda/local-data/*.local.json
+
+
 # AWS SAM build artifacts
 .aws-sam/
 
 # Misc
 *.log
-

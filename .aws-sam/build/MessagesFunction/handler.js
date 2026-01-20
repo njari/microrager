@@ -13,6 +13,12 @@ const BUCKET_NAME = process.env.BUCKET_NAME; // Set this env variable to your S3
 //  - "s3": uses S3 (real deployments)
 const STORAGE_MODE = process.env.MICRORAGER_STORAGE_MODE || 's3';
 
+// Local-mode files:
+// - SEED file is in the repo (so you can edit it). SAM mounts code read-only, so we do NOT write to it at runtime.
+// - RUNTIME file lives in /tmp inside the Lambda container (read/write). This persists for as long as the container stays warm.
+const LOCAL_SEED_FILENAME = process.env.MICRORAGER_LOCAL_SEED_FILENAME || 'microrager.local.seed.json';
+const LOCAL_SEED_PATH = path.join(__dirname, 'local-data', LOCAL_SEED_FILENAME);
+
 async function readLocalJson(filePath, defaultValue) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
@@ -65,7 +71,7 @@ exports.handler = async (event, context) => {
   const method = event.httpMethod;
   const today = new Date().toISOString().slice(0, 10);
   const MESSAGES_KEY = `${today}-microrager.json`;
-  const LOCAL_MESSAGES_PATH = path.join('/tmp', MESSAGES_KEY);
+  const LOCAL_RUNTIME_PATH = path.join('/tmp', MESSAGES_KEY);
   // Get source IP; adjust based on API Gateway version if necessary
   const ip = getSourceIp(event);
   let messages = [];
@@ -77,7 +83,10 @@ exports.handler = async (event, context) => {
 
   // Attempt to retrieve existing messages (local scratch file OR S3)
   if (STORAGE_MODE === 'local') {
-    messages = await readLocalJson(LOCAL_MESSAGES_PATH, []);
+    const seedMessages = await readLocalJson(LOCAL_SEED_PATH, []);
+    const runtimeMessages = await readLocalJson(LOCAL_RUNTIME_PATH, []);
+    // Merge: seed first (editable by you), then runtime (messages created via POST).
+    messages = [...seedMessages, ...runtimeMessages];
   } else {
     try {
       const data = await s3.send(
@@ -131,7 +140,12 @@ exports.handler = async (event, context) => {
     // Write updated messages back (local scratch file OR S3)
     try {
       if (STORAGE_MODE === 'local') {
-        await writeLocalJson(LOCAL_MESSAGES_PATH, messages);
+        // IMPORTANT: write only to /tmp runtime file. The repo seed file is mounted read-only in SAM.
+        // Also: only persist the POST-created messages (i.e., do not duplicate the seed entries).
+        const seedMessages = await readLocalJson(LOCAL_SEED_PATH, []);
+        const seedIds = new Set(seedMessages.map((m) => m?.id).filter(Boolean));
+        const runtimeOnly = messages.filter((m) => !m?.id || !seedIds.has(m.id));
+        await writeLocalJson(LOCAL_RUNTIME_PATH, runtimeOnly);
       } else {
         await s3.send(
           new PutObjectCommand({
@@ -186,7 +200,10 @@ exports.handler = async (event, context) => {
   // Write updated messages back (local scratch file OR S3)
   try {
     if (STORAGE_MODE === 'local') {
-      await writeLocalJson(LOCAL_MESSAGES_PATH, messages);
+      const seedMessages = await readLocalJson(LOCAL_SEED_PATH, []);
+      const seedIds = new Set(seedMessages.map((m) => m?.id).filter(Boolean));
+      const runtimeOnly = messages.filter((m) => !m?.id || !seedIds.has(m.id));
+      await writeLocalJson(LOCAL_RUNTIME_PATH, runtimeOnly);
     } else {
       await s3.send(
         new PutObjectCommand({
