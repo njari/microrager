@@ -6,7 +6,7 @@ const path = require('path');
 const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 const s3 = new S3Client({});
 
-const BUCKET_NAME = "microragerdata"; // Set this env variable to your S3 bucket name
+const BUCKET_NAME = "microrager"; // Set this env variable to your S3 bucket name
 
 // Explicit switch:
 //  - "local": uses a scratch json file (great for SAM local)
