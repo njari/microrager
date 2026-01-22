@@ -38,7 +38,7 @@ function App() {
   // For local dev:
   // - React dev server typically runs on http://localhost:3000
   // - SAM local start-api defaults to http://127.0.0.1:3000, so we move it to 3001.
-  const API_BASE_URL = 'https://dma4usozxcquqpg7mewa7uvujy0sbhdx.lambda-url.us-east-1.on.aws';
+  const API_BASE_URL = 'https://exr229adsg.execute-api.us-east-1.amazonaws.com/Prod';
 
   // Fetch messages from backend and transform them into bubble style
   function fetchMessages() {
