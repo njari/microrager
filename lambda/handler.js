@@ -135,11 +135,13 @@ exports.handler = async (event, context) => {
       return jsonResponse(400, { error: `Message must be at most ${MAX_MESSAGE_LENGTH} characters` });
     }
 
+
+    // TODO : little more sophisticated rate limit
     // Enforce rate limit: one message per IP per day
-    const alreadyPosted = messages.some(msg => msg.ip === ip && msg.date === today);
-    if (alreadyPosted) {
-      return jsonResponse(429, { error: 'Rate limit exceeded: Only one message per day allowed' });
-    }
+    // const alreadyPosted = messages(msg => msg.ip === ip && msg.date === today);
+    // if (alreadyPosted) {
+    //   return jsonResponse(429, { error: 'Rate limit exceeded: Only one message per day allowed' });
+    // }
 
     // Append new message with unique ID and initial votes
     const newMessage = {
