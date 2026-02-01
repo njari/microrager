@@ -1,4 +1,4 @@
-name: Deploy frontend (S3 + CloudFront)
+name: Deploy frontend
 
 on:
   push:
@@ -35,8 +35,4 @@ jobs:
 
       - name: Sync to S3
         run: |
-          aws s3 sync frontend/build s3://microrager-frontend --delete
-
-    #   - name: Invalidate CloudFront cache (optional)
-    #     run: |
-    #       aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+          aws s3 sync frontend/build s3://emotionalpulse.nubrajarial.com --delete
