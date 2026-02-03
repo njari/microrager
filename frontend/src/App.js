@@ -296,7 +296,7 @@ function App() {
   useEffect(() => {
     const t = setInterval(() => {
       flushVotes();
-    }, 600000);
+    }, 60000);
     return () => clearInterval(t);
   }, [voteBuffer]);
 
