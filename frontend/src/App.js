@@ -249,7 +249,7 @@ function App() {
           <input
             className="prompt-input"
             type="text"
-            placeholder="Log your emotional pulse of the day"
+            placeholder="Log your emotional pulse"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
           />
