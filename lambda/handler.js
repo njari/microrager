@@ -73,29 +73,12 @@ exports.handler = async (event, context) => {
   }
 
   // Attempt to retrieve existing messages (local scratch file OR S3)
-  if (STORAGE_MODE === 'local') {
-    const seedMessages = await readLocalJson(LOCAL_SEED_PATH, []);
-    const runtimeMessages = await readLocalJson(LOCAL_RUNTIME_PATH, []);
-    // Merge: seed first (editable by you), then runtime (messages created via POST).
-    messages = [...seedMessages, ...runtimeMessages];
-  } else {
-    try {
-      const data = await s3.send(
-        new GetObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: MESSAGES_KEY
-        })
-      );
-      const bodyStr = await streamToString(data.Body);
-      messages = JSON.parse(bodyStr);
-    } catch (err) {
-      // If the messages file doesn't exist, start with an empty array
-      const code = err?.name || err?.Code || err?.code;
-      if (code !== 'NoSuchKey' && code !== 'NotFound') {
-        console.error('Error fetching messages:', err);
-        return jsonResponse(500, { error: 'Error reading messages' });
-      }
-    }
+  // Read existing messages (from consolidated storage helper)
+  try {
+    messages = await readMessagesForDate(today);
+  } catch (err) {
+    console.error('Error fetching messages:', err);
+    return jsonResponse(500, { error: 'Error reading messages' });
   }
 
   if (method === 'POST') {
@@ -125,14 +108,6 @@ exports.handler = async (event, context) => {
     }
 
 
-    // TODO : little more sophisticated rate limit
-    // Enforce rate limit: one message per IP per day
-    // const alreadyPosted = messages(msg => msg.ip === ip && msg.date === today);
-    // if (alreadyPosted) {
-    //   return jsonResponse(429, { error: 'Rate limit exceeded: Only one message per day allowed' });
-    // }
-
-    // Append new message with unique ID and initial votes
     const newMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
       ip: ip,
@@ -143,25 +118,9 @@ exports.handler = async (event, context) => {
     };
     messages.push(newMessage);
 
-    // Write updated messages back (local scratch file OR S3)
+    // Write updated messages back (via storage helper)
     try {
-      if (STORAGE_MODE === 'local') {
-        // IMPORTANT: write only to /tmp runtime file. The repo seed file is mounted read-only in SAM.
-        // Also: only persist the POST-created messages (i.e., do not duplicate the seed entries).
-        const seedMessages = await readLocalJson(LOCAL_SEED_PATH, []);
-        const seedIds = new Set(seedMessages.map((m) => m?.id).filter(Boolean));
-        const runtimeOnly = messages.filter((m) => !m?.id || !seedIds.has(m.id));
-        await writeLocalJson(LOCAL_RUNTIME_PATH, runtimeOnly);
-      } else {
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: MESSAGES_KEY,
-            Body: JSON.stringify(messages),
-            ContentType: 'application/json'
-          })
-        );
-      }
+      await writeMessagesForDate(today, messages);
     } catch (putError) {
       console.error('Error updating messages:', putError);
       return jsonResponse(500, { error: 'Error saving message' });
@@ -204,23 +163,9 @@ exports.handler = async (event, context) => {
     }
   }
   
-  // Write updated messages back (local scratch file OR S3)
+  // Write updated messages back (via storage helper)
   try {
-    if (STORAGE_MODE === 'local') {
-      const seedMessages = await readLocalJson(LOCAL_SEED_PATH, []);
-      const seedIds = new Set(seedMessages.map((m) => m?.id).filter(Boolean));
-      const runtimeOnly = messages.filter((m) => !m?.id || !seedIds.has(m.id));
-      await writeLocalJson(LOCAL_RUNTIME_PATH, runtimeOnly);
-    } else {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: MESSAGES_KEY,
-          Body: JSON.stringify(messages),
-          ContentType: 'application/json'
-        })
-      );
-    }
+    await writeMessagesForDate(today, messages);
   } catch (putError) {
     console.error('Error updating votes:', putError);
     return jsonResponse(500, { error: 'Error saving votes' });
