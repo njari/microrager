@@ -6,8 +6,9 @@ Globals:
   Api:
     Cors:
       # SAM expects these values to be strings that include quotes.
+      # Include PATCH here so browser preflight and requests for PATCH /messages/votes succeed.
       # See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-api-cors.html
-      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowMethods: "'GET,POST,PATCH,OPTIONS'"
       AllowHeaders: "'content-type'"
       AllowOrigin: "'*'"
 

@@ -258,6 +258,7 @@ function App() {
   const [votesByMessageId, setVotesByMessageId] = useState({});
   // Buffer of votes to be flushed to backend: { messageId: [rgbCss, ...] }
   const [voteBuffer, setVoteBuffer] = useState({});
+  const voteBufferRef = useRef(voteBuffer);
 
   // Persist buffer to localStorage so votes survive reloads
   useEffect(() => {
@@ -275,6 +276,7 @@ function App() {
     } catch (err) {
       console.warn('Could not write vote buffer to localStorage', err);
     }
+    voteBufferRef.current = voteBuffer;
   }, [voteBuffer]);
 
   // API base URL is injected at build/runtime. Set REACT_APP_API_BASE_URL in your env or GitHub Actions.
@@ -347,7 +349,7 @@ function App() {
 
   // Flush buffered votes to backend (patch)
   async function flushVotes() {
-    const entries = Object.entries(voteBuffer);
+    const entries = Object.entries(voteBufferRef.current || {});
     if (!entries.length) return;
     const votes = [];
     for (const [id, colors] of entries) {
