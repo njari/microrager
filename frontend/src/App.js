@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 function clamp(n, min, max) {
@@ -88,10 +88,27 @@ function Bubble({ msg, voteCount, onVote }) {
   const [isVoting, setIsVoting] = useState(false);
   const [preview, setPreview] = useState({ css: 'rgb(255,255,255)', x: 0.5, y: 0.5, r: 255, g: 255, b: 255 });
   const [pulse, setPulse] = useState(0);
+  const releaseTimerRef = useRef(null);
 
   function handleBubbleClick(e) {
     e.stopPropagation();
-    setIsVoting((v) => !v);
+    setIsVoting((v) => {
+      const nv = !v;
+      // if we're entering voting mode, start the auto-release timer
+      if (nv) {
+        if (releaseTimerRef.current) clearTimeout(releaseTimerRef.current);
+        releaseTimerRef.current = setTimeout(() => {
+          setIsVoting(false);
+        }, 3000);
+      } else {
+        // leaving voting mode, clear timer
+        if (releaseTimerRef.current) {
+          clearTimeout(releaseTimerRef.current);
+          releaseTimerRef.current = null;
+        }
+      }
+      return nv;
+    });
   }
 
   function handleCloudMove(e) {
@@ -105,6 +122,12 @@ function Bubble({ msg, voteCount, onVote }) {
   function handleCloudClick(e) {
     e.stopPropagation();
     onVote(msg.id, preview.css);
+
+    // a selection was made — clear the auto-release timer so voting stays open until user closes
+    if (releaseTimerRef.current) {
+      clearTimeout(releaseTimerRef.current);
+      releaseTimerRef.current = null;
+    }
 
     // Haptic feedback on supported devices.
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {

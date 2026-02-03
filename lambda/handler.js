@@ -36,20 +36,12 @@ async function writeLocalJson(filePath, value) {
   await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf8');
 }
 
-function streamToString(stream) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
-    stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-  });
-}
+const { readMessagesForDate, writeMessagesForDate } = require('./lib/storage');
 
 function jsonResponse(statusCode, bodyObj) {
   return {
     statusCode,
     headers: {
-      // Allow local dev (SAM local, CRA) and any deployed clients.
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'content-type',
       'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS'
@@ -59,9 +51,6 @@ function jsonResponse(statusCode, bodyObj) {
 }
 
 function getSourceIp(event) {
-  // API Gateway v1: event.requestContext.identity.sourceIp
-  // API Gateway v2: event.requestContext.http.sourceIp
-  // SAM local: requestContext may not exist.
   return (
     event?.requestContext?.identity?.sourceIp ||
     event?.requestContext?.http?.sourceIp ||
@@ -190,14 +179,15 @@ exports.handler = async (event, context) => {
   }
   
   // Expecting body.votes to be an array of vote objects: [{ id, emoji, count }]
+  // Expecting body.votes to be an array of vote objects: [{ id, color, count }]
   if (!body.votes || !Array.isArray(body.votes)) {
     return jsonResponse(400, { error: 'Votes array is required' });
   }
-  
-  // Process each vote
+
+  // Process each vote (color-based)
   for (const voteItem of body.votes) {
-    const { id, emoji, count } = voteItem;
-    if (!id || !emoji || typeof count !== 'number') {
+    const { id, color, count } = voteItem;
+    if (!id || !color || typeof count !== 'number') {
       continue;
     }
     const messageToUpdate = messages.find(msg => msg.id === id);
@@ -207,10 +197,10 @@ exports.handler = async (event, context) => {
     if (!messageToUpdate.votes) {
       messageToUpdate.votes = {};
     }
-    if (messageToUpdate.votes[emoji]) {
-      messageToUpdate.votes[emoji] += count;
+    if (messageToUpdate.votes[color]) {
+      messageToUpdate.votes[color] += count;
     } else {
-      messageToUpdate.votes[emoji] = count;
+      messageToUpdate.votes[color] = count;
     }
   }
   
