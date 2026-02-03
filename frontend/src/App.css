@@ -105,6 +105,151 @@
   backdrop-filter: blur(1px);
 }
 
+.bubble--voting {
+  /* Freeze bubble while voting (sway + float) */
+  animation-play-state: paused;
+  transform: scale(1.35);
+  z-index: 5;
+}
+
+/* While voting, always show the message text (even without hover) */
+.bubble--voting .bubble-text {
+  color: #555;
+}
+
+.bubble-vote-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(40, 40, 40, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+  backdrop-filter: blur(8px);
+}
+
+/* Voting cloud: blurred pastel gradient halo */
+.vote-cloud {
+  position: absolute;
+  inset: -65px;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: auto;
+  /* isolate so filter effects don't bleed to siblings */
+  isolation: isolate;
+
+  /*
+    Centered amorphous cloud with a visible nucleus + ~10 pastel lobes spanning 0..360 hues.
+    (reds, oranges, yellows, greens, cyans, blues, purples).
+  */
+  background:
+    /* nucleus */
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.00) 48%),
+    radial-gradient(circle at 50% 50%, rgba(255, 230, 245, 0.55), rgba(255, 230, 245, 0.00) 62%),
+
+    /* lobes around center (pastel anchors) */
+    radial-gradient(circle at 36% 28%, rgba(211, 144, 144, 0.85), rgba(255, 210, 210, 0.00) 56%), /* red */
+    radial-gradient(circle at 58% 22%, rgba(223, 153, 106, 0.82), rgba(255, 225, 205, 0.00) 58%), /* orange */
+    radial-gradient(circle at 72% 34%, rgba(239, 213, 107, 0.82), rgba(255, 245, 205, 0.00) 58%), /* yellow */
+    radial-gradient(circle at 76% 54%, rgba(170, 237, 158, 0.8), rgba(225, 255, 220, 0.00) 60%), /* yellow-green */
+    radial-gradient(circle at 66% 74%, rgba(66, 182, 124, 0.8), rgba(215, 255, 235, 0.00) 60%), /* green */
+    radial-gradient(circle at 46% 80%, rgba(87, 192, 205, 0.82), rgba(210, 250, 255, 0.00) 60%), /* cyan */
+    radial-gradient(circle at 26% 70%, rgba(99, 151, 214, 0.82), rgba(210, 230, 255, 0.00) 60%), /* blue */
+    radial-gradient(circle at 22% 50%, rgba(108, 97, 179, 0.8), rgba(220, 215, 255, 0.00) 60%), /* indigo */
+    radial-gradient(circle at 28% 34%, rgba(178, 119, 227, 0.82), rgba(235, 210, 255, 0.00) 60%), /* violet */
+    radial-gradient(circle at 46% 24%, rgba(219, 126, 188, 0.78), rgba(255, 210, 240, 0.00) 58%); /* pink */
+
+  filter: blur(20px) saturate(1.4);
+  opacity: 0.95;
+
+  /* Hide OS cursor; we'll render our own picker */
+  cursor: none;
+}
+
+/* Tiny dot that follows cursor and previews current selected pastel */
+.vote-cloud__preview {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(93, 92, 92, 0.85);
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.14),
+    0 0 0 1px rgba(0,0,0,0.06);
+  filter: blur(0);
+}
+
+.vote-cloud__picker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 50; /* put picker above blurred cloud */
+  filter: none; /* ensure picker is not blurred */
+  /* subtle outer ring to separate from cloud */
+  box-shadow: 0 10px 20px rgba(0,0,0,0.16);
+}
+
+.vote-cloud__swatch {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.95);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12) inset, 0 6px 12px rgba(0,0,0,0.08);
+}
+
+.vote-cloud__rgb {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.95);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+  pointer-events: none;
+  background: rgba(255,255,255,0.95); /* opaque shell */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vote-cloud__rgb::after {
+  /* inner dot shows the actual selected color */
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor; /* set via inline style color */
+  box-shadow: 0 3px 6px rgba(0,0,0,0.14) inset;
+}
+
+@keyframes pickerPulse {
+  from {
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 .bubble::after {
   content: "";
   position: absolute;
@@ -148,6 +293,11 @@
       rgba(230, 200, 255, 0.55)
     );
   filter: saturate(1.05) contrast(1.05);
+}
+
+/* Don’t override the voting mode styling when hovered */
+.bubble--voting:hover {
+  transform: scale(1.35);
 }
 
 /* Pop droplets (shown near the end of the float cycle) */

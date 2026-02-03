@@ -1,6 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+// h in [0, 360), s/l in [0, 100]
+function hslToRgb(h, s, l) {
+  const _s = s / 100;
+  const _l = l / 100;
+  const c = (1 - Math.abs(2 * _l - 1)) * _s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = _l - c / 2;
+
+  let r1 = 0;
+  let g1 = 0;
+  let b1 = 0;
+  if (0 <= h && h < 60) {
+    r1 = c; g1 = x; b1 = 0;
+  } else if (60 <= h && h < 120) {
+    r1 = x; g1 = c; b1 = 0;
+  } else if (120 <= h && h < 180) {
+    r1 = 0; g1 = c; b1 = x;
+  } else if (180 <= h && h < 240) {
+    r1 = 0; g1 = x; b1 = c;
+  } else if (240 <= h && h < 300) {
+    r1 = x; g1 = 0; b1 = c;
+  } else {
+    r1 = c; g1 = 0; b1 = x;
+  }
+
+  const r = Math.round((r1 + m) * 255);
+  const g = Math.round((g1 + m) * 255);
+  const b = Math.round((b1 + m) * 255);
+  return { r, g, b };
+}
+
+function pastelFromPoint({ x01, y01 }) {
+  // Pastel constraint: high lightness, moderate/low saturation.
+  // We also quantize hue into ~10 buckets so the palette feels intentionally varied,
+  // while still spanning the full 0..360 degrees (reds/yellows/greens/cyans/blues/purples).
+  const rawHue = clamp(x01, 0, 1) * 360;
+  const bucketCount = 10;
+  const bucketSize = 360 / bucketCount; // 36deg
+  const bucketIdx = Math.floor(rawHue / bucketSize);
+  // Center of the bucket with a little intra-bucket jitter (from y) to keep it organic.
+  const jitter = (clamp(1 - y01, 0, 1) - 0.5) * 10; // -5..+5 deg
+  const hue = (bucketIdx * bucketSize + bucketSize / 2 + jitter + 360) % 360;
+
+  const sat = 38 + clamp(1 - y01, 0, 1) * 18; // 38..56
+  const light = 78 + clamp(y01, 0, 1) * 9; // 78..87
+  const { r, g, b } = hslToRgb(hue, sat, light);
+  return { r, g, b, css: `rgb(${r}, ${g}, ${b})` };
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -31,9 +84,98 @@ function generateBubbleProps(index, total) {
   };
 }
 
+function Bubble({ msg, voteCount, onVote }) {
+  const [isVoting, setIsVoting] = useState(false);
+  const [preview, setPreview] = useState({ css: 'rgb(255,255,255)', x: 0.5, y: 0.5, r: 255, g: 255, b: 255 });
+  const [pulse, setPulse] = useState(0);
+
+  function handleBubbleClick(e) {
+    e.stopPropagation();
+    setIsVoting((v) => !v);
+  }
+
+  function handleCloudMove(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x01 = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const y01 = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+    const p = pastelFromPoint({ x01, y01 });
+    setPreview({ css: p.css, x: x01, y: y01, r: p.r, g: p.g, b: p.b });
+  }
+
+  function handleCloudClick(e) {
+    e.stopPropagation();
+    onVote(msg.id, preview.css);
+
+    // Haptic feedback on supported devices.
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(10);
+    }
+
+    // Visual pulse feedback (works everywhere)
+    setPulse((p) => p + 1);
+  }
+
+  return (
+    <div
+      className={`bubble ${isVoting ? 'bubble--voting' : ''}`}
+      onClick={handleBubbleClick}
+      style={{
+        left: msg.left,
+        '--delay': msg.delay,
+        '--bubble-size': msg.size,
+        '--sway-amount': msg.swayAmount,
+        '--sway-duration': msg.swayDuration
+      }}
+    >
+      <span className="bubble-droplets" aria-hidden="true" />
+      <span className="bubble-text">{msg.message}</span>
+
+      {voteCount > 0 && (
+        <span className="bubble-vote-badge" aria-label={`${voteCount} votes`}>{voteCount}</span>
+      )}
+
+      {isVoting && (
+        <div
+          className="vote-cloud"
+          role="application"
+          aria-label="Pick a pastel color to vote"
+          onMouseMove={handleCloudMove}
+          onClick={handleCloudClick}
+        >
+          <div
+            className="vote-cloud__preview"
+            style={{
+              background: preview.css,
+              left: `${preview.x * 100}%`,
+              top: `${preview.y * 100}%`
+            }}
+          />
+        </div>
+      )}
+      {isVoting && (
+        <div
+          key={pulse}
+          className="vote-cloud__picker"
+          style={{
+            left: `${preview.x * 100}%`,
+            top: `${preview.y * 100}%`,
+            color: preview.css
+          }}
+        >
+          <span className="vote-cloud__swatch" style={{ background: preview.css }} />
+          <span className="vote-cloud__rgb" aria-hidden="true" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+
+  // Frontend-only votes: { [messageId]: [{ rgb: "rgb(...)" , ts: number }] }
+  const [votesByMessageId, setVotesByMessageId] = useState({});
 
   // For local dev:
   // - React dev server typically runs on http://localhost:3000
@@ -89,6 +231,16 @@ function App() {
       });
   }
 
+  function handleVote(messageId, rgbCss) {
+    setVotesByMessageId((prev) => {
+      const existing = prev[messageId] || [];
+      return {
+        ...prev,
+        [messageId]: [...existing, { rgb: rgbCss, ts: Date.now() }]
+      };
+    });
+  }
+
   return (
     <div className="App">
       <div className="background" />
@@ -97,7 +249,7 @@ function App() {
           <input
             className="prompt-input"
             type="text"
-            placeholder="What's annoying you?"
+            placeholder="Log your emotional pulse of the day"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
           />
@@ -105,20 +257,12 @@ function App() {
       </div>
       <div className="bubbles-container">
         {messages.map((msg) => (
-          <div
-            className="bubble"
+          <Bubble
             key={msg.id}
-            style={{
-              left: msg.left,
-              '--bubble-size': msg.size,
-              '--sway-amount': msg.swayAmount,
-              '--sway-duration': msg.swayDuration,
-              '--delay': msg.delay
-            }}
-          >
-            <span className="bubble-droplets" aria-hidden="true" />
-            <span className="bubble-text">{msg.message}</span>
-          </div>
+            msg={msg}
+            voteCount={(votesByMessageId[msg.id] || []).length}
+            onVote={handleVote}
+          />
         ))}
       </div>
     </div>
