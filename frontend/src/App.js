@@ -220,10 +220,9 @@ function App() {
     }
   }, [voteBuffer]);
 
-  // For local dev:
-  // - React dev server typically runs on http://localhost:3000
-  // - SAM local start-api defaults to http://127.0.0.1:3000, so we move it to 3001.
-  const API_BASE_URL = 'https://exr229adsg.execute-api.us-east-1.amazonaws.com/Prod';
+  // API base URL is injected at build/runtime. Set REACT_APP_API_BASE_URL in your env or GitHub Actions.
+  // Defaults to local SAM when not provided.
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:3001';
 
   // Fetch messages from backend and transform them into bubble style
   function fetchMessages() {
