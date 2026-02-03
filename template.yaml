@@ -43,11 +43,37 @@ Resources:
           Properties:
             Path: /messages
             Method: POST
+        PatchVotesApi:
+          Type: Api
+          Properties:
+            Path: /messages/votes
+            Method: PATCH
         OptionsMessagesApi:
           Type: Api
           Properties:
             Path: /messages
             Method: OPTIONS
+
+  VotesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: VotesFunction
+      CodeUri: lambda/
+      Handler: votesHandler.handler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref MessagesBucket
+          MICRORAGER_STORAGE_MODE: s3
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref MessagesBucket
+      Events:
+        PatchVotesApi:
+          Type: Api
+          Properties:
+            Path: /messages/votes
+            Method: PATCH
 
 Outputs:
   ApiUrl:

@@ -176,6 +176,26 @@ function App() {
 
   // Frontend-only votes: { [messageId]: [{ rgb: "rgb(...)" , ts: number }] }
   const [votesByMessageId, setVotesByMessageId] = useState({});
+  // Buffer of votes to be flushed to backend: { messageId: [rgbCss, ...] }
+  const [voteBuffer, setVoteBuffer] = useState({});
+
+  // Persist buffer to localStorage so votes survive reloads
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('microrager_vote_buffer');
+      if (raw) setVoteBuffer(JSON.parse(raw));
+    } catch (err) {
+      console.warn('Could not read vote buffer from localStorage', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('microrager_vote_buffer', JSON.stringify(voteBuffer));
+    } catch (err) {
+      console.warn('Could not write vote buffer to localStorage', err);
+    }
+  }, [voteBuffer]);
 
   // For local dev:
   // - React dev server typically runs on http://localhost:3000
@@ -239,7 +259,46 @@ function App() {
         [messageId]: [...existing, { rgb: rgbCss, ts: Date.now() }]
       };
     });
+    // add to buffer
+    setVoteBuffer((b) => {
+      const arr = b[messageId] || [];
+      return { ...b, [messageId]: [...arr, rgbCss] };
+    });
   }
+
+  // Flush buffered votes to backend (patch)
+  async function flushVotes() {
+    const entries = Object.entries(voteBuffer);
+    if (!entries.length) return;
+    const votes = [];
+    for (const [id, colors] of entries) {
+      // aggregate counts by color
+      const counts = {};
+      for (const c of colors) counts[c] = (counts[c] || 0) + 1;
+      for (const [color, count] of Object.entries(counts)) {
+        votes.push({ id, color, count });
+      }
+    }
+    try {
+      await fetch(`${API_BASE_URL}/messages/votes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ votes })
+      });
+      // clear buffer on success
+      setVoteBuffer({});
+    } catch (err) {
+      console.error('Error flushing votes:', err);
+    }
+  }
+
+  // Periodically flush votes (every 8s)
+  useEffect(() => {
+    const t = setInterval(() => {
+      flushVotes();
+    }, 600000);
+    return () => clearInterval(t);
+  }, [voteBuffer]);
 
   return (
     <div className="App">
