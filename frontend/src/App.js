@@ -138,6 +138,62 @@ function Bubble({ msg, voteCount, onVote }) {
     setPulse((p) => p + 1);
   }
 
+  // Build a pastel conic-gradient tinge from message.votes (object { 'rgb(r,g,b)': count })
+  function parseRgbString(s) {
+    // expect 'rgb(r, g, b)'
+    const m = /rgb\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/i.exec(s);
+    if (!m) return null;
+    return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+  }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0; const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h = h * 60;
+    }
+    return { h, s: s * 100, l: l * 100 };
+  }
+
+  function toPastelCssFromRgbString(s) {
+    const rgb = parseRgbString(s);
+    if (!rgb) return 'rgba(255,255,255,0)';
+    const { h } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    // pastel constraints: medium-low sat, high lightness
+    const sat = 40; const light = 82; const alpha = 0.85;
+    return `hsla(${Math.round(h)}, ${sat}%, ${light}%, ${alpha})`;
+  }
+
+  function buildTingeStyle(votesObj) {
+    if (!votesObj || Object.keys(votesObj).length === 0) return null;
+    const entries = Object.entries(votesObj);
+    const total = entries.reduce((s, [, c]) => s + (Number(c) || 0), 0) || 1;
+    // create color stops proportionally
+    let angle = 0;
+    const stops = [];
+    for (const [rgbStr, count] of entries) {
+      const portion = (Number(count) || 0) / total;
+      const deg = Math.max(1, Math.round(portion * 360));
+      const color = toPastelCssFromRgbString(rgbStr);
+      const start = angle;
+      const end = angle + deg;
+      stops.push(`${color} ${start}deg ${end}deg`);
+      angle = end;
+    }
+    const bg = `conic-gradient(${stops.join(', ')})`;
+    return { background: bg };
+  }
+
+  const tingeStyle = buildTingeStyle(msg.votes);
+
   return (
     <div
       className={`bubble ${isVoting ? 'bubble--voting' : ''}`}
@@ -150,6 +206,7 @@ function Bubble({ msg, voteCount, onVote }) {
         '--sway-duration': msg.swayDuration
       }}
     >
+      {tingeStyle && <div className="bubble-tinge" style={tingeStyle} aria-hidden="true" />}
       <span className="bubble-droplets" aria-hidden="true" />
       <span className="bubble-text">{msg.message}</span>
 
@@ -318,7 +375,7 @@ function App() {
   useEffect(() => {
     const t = setInterval(() => {
       flushVotes();
-    }, 60000);
+    }, 5000);
     return () => clearInterval(t);
   }, [voteBuffer]);
 

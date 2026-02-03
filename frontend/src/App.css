@@ -105,6 +105,16 @@
   backdrop-filter: blur(1px);
 }
 
+.bubble-tinge {
+  position: absolute;
+  inset: -36px;
+  border-radius: 50%;
+  z-index: -2;
+  opacity: 0.9;
+  filter: blur(18px) saturate(1.05);
+  pointer-events: none;
+}
+
 .bubble--voting {
   /* Freeze bubble while voting (sway + float) */
   animation-play-state: paused;
