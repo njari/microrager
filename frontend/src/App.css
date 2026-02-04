@@ -25,6 +25,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 2rem 3rem;
+  width: min(92%, 640px);
+  box-sizing: border-box;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(12px);
@@ -41,13 +43,35 @@
 /* Input styling for the prompt text box */
 .prompt-input {
   width: 100%;
-  padding: 0.8rem;
+  padding: 0.8rem 0.9rem;
   border: none;
   font-size: 1.2rem;
   border-radius: 8px;
   outline: none;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.9);
   color: #333;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  text-overflow: ellipsis;
+}
+
+/* Mobile adjustments: make prompt full-width near bottom so keyboard doesn't obscure it */
+@media (max-width: 640px) {
+  .center-prompt {
+    top: auto;
+    bottom: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 1rem;
+    border-radius: 12px;
+    width: calc(100% - 32px);
+  }
+
+  .prompt-input {
+    font-size: 1rem;
+    padding: 0.9rem;
+  }
 }
 
 /* Container for animated bubbles */

@@ -253,6 +253,7 @@ function Bubble({ msg, voteCount, onVote }) {
 function App() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef(null);
 
   // Frontend-only votes: { [messageId]: [{ rgb: "rgb(...)" , ts: number }] }
   const [votesByMessageId, setVotesByMessageId] = useState({});
@@ -332,6 +333,18 @@ function App() {
       });
   }
 
+  // Ensure input scrolls into view on mobile when focused (helps iOS keyboard)
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    function onFocus() {
+      // small timeout to allow keyboard to appear
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    }
+    el.addEventListener('focus', onFocus);
+    return () => el.removeEventListener('focus', onFocus);
+  }, [inputRef]);
+
   function handleVote(messageId, rgbCss) {
     setVotesByMessageId((prev) => {
       const existing = prev[messageId] || [];
@@ -391,6 +404,7 @@ function App() {
             type="text"
             placeholder="Log your emotional pulse"
             value={inputValue}
+            ref={inputRef}
             onChange={(e) => setInputValue(e.target.value)}
           />
         </form>
